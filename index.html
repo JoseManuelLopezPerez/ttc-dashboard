@@ -883,7 +883,7 @@ function drawWave(){
       else if(b1===0&&b2===0)mPhase=5*Math.PI/4;
       else mPhase=7*Math.PI/4;
     }
-    const y=cy-amp*Math.cos(2*Math.PI*numSyms*2.5*frac+mPhase);
+    const y=cy-amp*Math.cos(2*Math.PI*numSyms*1.5*frac+mPhase);
     if(px===0)ctx.moveTo(xPos,y);else ctx.lineTo(xPos,y);
   }
   ctx.stroke();
