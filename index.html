@@ -290,6 +290,14 @@ canvas{display:block}
     </div>
     <div class="info-box" style="margin:12px"><strong>★ = Bandas más utilizadas en misiones actuales.</strong> La selección de banda implica un tradeoff fundamental: frecuencias bajas (S-band) son robustas y baratas pero tienen poco ancho de banda (B<sub>N</sub>≤6 MHz, típicamente &lt;1 Mbps). Frecuencias altas (Ka-band) permiten cientos de Mbps pero sufren fades severos por lluvia (&gt;10 dB) y requieren apuntamiento de sub-milirradián. El proceso de aprobación ante la NTIA/UIT (Fig. 21-1 del SMAD) puede tardar años.</div>
   </div>
+  <div class="sl">Espectro RF — escala logarítmica</div>
+  <div class="box">
+    <div class="bxh"><span class="bxt">Distribución de bandas por tipo de misión</span><span class="bxtag">Interactivo · pasa el cursor</span></div>
+    <div class="bxb" style="padding:10px 16px">
+      <canvas id="cvRFSpec" style="width:100%;display:block" height="180"></canvas>
+      <div id="rfSpecTip" style="margin-top:8px;font-size:12px;color:#6e6e73;padding:8px 12px;background:#f5f5f7;border-radius:8px;min-height:32px">Pasa el cursor sobre una banda para ver los detalles de asignación.</div>
+    </div>
+  </div>
   <div class="modnav"><button class="mnbtn" onclick="go(1)">← Requisitos</button><button class="mnbtn" onclick="go(3)">Link budget →</button></div>
 </div>
 
@@ -439,9 +447,7 @@ canvas{display:block}
           <div style="margin-top:8px;font-size:11px;color:#6e6e73;line-height:1.5" id="constCaption">Puntos de datos ligeramente desviados del eje I — la portadora residual está en el centro.</div>
         </div>
         <div>
-          <div style="font-size:10px;font-weight:600;color:#aeaeb2;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Forma de onda en tiempo — secuencia: 1 0 1 1 0 1 0 0</div>
-          <canvas id="cvWave" height="110" style="border-radius:10px;border:1px solid #e0e0e5;width:100%"></canvas>
-          <div style="margin-top:6px;font-size:11px;color:#6e6e73;line-height:1.5" id="waveCaption">Los números debajo de la onda son los bits transmitidos. Las líneas verticales marcan los cambios de símbolo.</div>
+
           <div style="font-size:10px;font-weight:600;color:#aeaeb2;letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px">Espectro de magnitud normalizado (× tasa de bit)</div>
           <canvas id="cvSpec" height="120" style="border-radius:10px;border:1px solid #e0e0e5;width:100%"></canvas>
           <div style="margin-top:6px;font-size:11px;color:#6e6e73;line-height:1.5" id="specCaption">El lóbulo central contiene la mayor parte de la energía. QPSK lo tiene la mitad de ancho que BPSK.</div>
@@ -788,9 +794,9 @@ function drawAll(){
   document.getElementById('modSchemeTitle').textContent=s.t+' — Constelación y señal';
   document.getElementById('modSchemeBeta').textContent=curScheme===0?'β = '+betaDeg+'°':(curScheme===1?'β = 90°':'2 bits/símbolo');
   document.getElementById('constCaption').textContent=s.const_cap;
-  document.getElementById('waveCaption').textContent=s.wave_cap;
+
   document.getElementById('specCaption').textContent=s.spec_cap;
-  drawConst();drawWave();drawSpec5();drawPropGrid();
+  drawConst();drawSpec5();drawPropGrid();
 }
 function drawConst(){
   const cv=document.getElementById('cvConst');
@@ -1062,8 +1068,79 @@ function renderChart(i){
 }
 renderChart(0);
 
+// ═══ RF SPECTRUM ═══════════════════════════════════════════
+function drawRFSpectrum(){
+  const cv=document.getElementById('cvRFSpec');
+  if(!cv)return;
+  cv.width=cv.offsetWidth||800;
+  const W=cv.width,H=180,ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#fafafa';ctx.fillRect(0,0,W,H);
+  const fMin=0.08,fMax=45,pad=72,plotW=W-pad-16;
+  const toX=f=>pad+plotW*(Math.log10(f)-Math.log10(fMin))/(Math.log10(fMax)-Math.log10(fMin));
+  const bands=[
+    {n:'VHF/UHF',f0:.1,f1:.45,ne:true,ds:true,col:'#8e8e93',neTxt:'0.14–0.44 GHz',dsTxt:'0.39–0.45 GHz'},
+    {n:'S-Band Militar',f0:1.7,f1:2.3,ne:true,ds:false,col:'#c87000',neTxt:'1.7–2.3 GHz'},
+    {n:'S-Band NASA',f0:2.025,f1:2.3,ne:true,ds:true,col:'#0071e3',neTxt:'2.025–2.3 GHz',dsTxt:'2.0–2.3 GHz'},
+    {n:'C-Band',f0:3.7,f1:6.5,ne:true,ds:false,col:'#aeaeb2',neTxt:'3.7–6.5 GHz'},
+    {n:'X-Band',f0:8.0,f1:8.5,ne:true,ds:true,col:'#30a86d',neTxt:'8.0–8.45 GHz',dsTxt:'8.45–8.5 GHz'},
+    {n:'Ku-Band',f0:11,f1:15,ne:true,ds:false,col:'#8e44ad',neTxt:'11–15 GHz'},
+    {n:'Ka-Band NE',f0:17.7,f1:27.5,ne:true,ds:false,col:'#5856d6',neTxt:'17.7–27.5 GHz'},
+    {n:'Ka-Band DS',f0:31.8,f1:40.5,ne:false,ds:true,col:'#ff6b35',dsTxt:'31.8–40.5 GHz'},
+  ];
+  const rowNE=28,rowDS=98,rH=52,gap=18;
+  // Row labels
+  ['Near-Earth','Deep-Space'].forEach((lbl,i)=>{
+    const y=i===0?rowNE:rowDS;
+    ctx.fillStyle='#1d1d1f';ctx.font='bold 11px sans-serif';ctx.textAlign='right';
+    ctx.fillText(lbl,pad-8,y+rH/2+4);
+    ctx.fillStyle=i===0?'#0071e3':'#30a86d';ctx.font='9px sans-serif';
+    ctx.fillText(i===0?'≤ 2×10⁶ km':'> 2×10⁶ km',pad-8,y+rH/2+16);
+  });
+  // Frequency grid
+  [0.1,.2,.5,1,2,5,10,20,40].forEach(f=>{
+    const x=toX(f);
+    ctx.strokeStyle='#ebebef';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,rowNE-4);ctx.lineTo(x,rowDS+rH+4);ctx.stroke();
+    ctx.fillStyle='#aeaeb2';ctx.font='9px sans-serif';ctx.textAlign='center';
+    ctx.fillText(f<1?f*1000+'M':f+'G',x,rowDS+rH+16);
+  });
+  ctx.fillStyle='#6e6e73';ctx.font='9px sans-serif';ctx.textAlign='center';
+  ctx.fillText('Hz →',W-8,rowDS+rH+16);
+  // Draw bands
+  bands.forEach(b=>{
+    const x0=toX(b.f0),x1=toX(b.f1),bw=Math.max(x1-x0,3);
+    const drawRow=(row)=>{
+      ctx.fillStyle=b.col+'28';ctx.fillRect(x0,row,bw,rH);
+      ctx.strokeStyle=b.col;ctx.lineWidth=1.5;ctx.strokeRect(x0,row,bw,rH);
+      if(bw>38){
+        ctx.fillStyle=b.col;ctx.font='bold 8.5px sans-serif';ctx.textAlign='center';
+        ctx.fillText(b.n,x0+bw/2,row+rH/2+1);
+      } else if(bw>14){
+        ctx.fillStyle=b.col;ctx.font='bold 8px sans-serif';ctx.textAlign='center';
+        ctx.fillText(b.n.split(' ')[0],x0+bw/2,row+rH/2+1);
+      }
+    };
+    if(b.ne)drawRow(rowNE);
+    if(b.ds)drawRow(rowDS);
+  });
+  // Hover
+  cv.onmousemove=e=>{
+    const r=cv.getBoundingClientRect(),mx=(e.clientX-r.left)*(W/r.width);
+    const f=Math.pow(10,Math.log10(fMin)+(mx-pad)/plotW*(Math.log10(fMax)-Math.log10(fMin)));
+    const b=bands.find(b=>f>=b.f0&&f<=b.f1);
+    const tip=document.getElementById('rfSpecTip');
+    if(b&&mx>=pad){
+      tip.innerHTML=`<strong style="color:${b.col}">${b.n}</strong> — ${b.f0}–${b.f1} GHz&nbsp;&nbsp;`+
+      (b.ne?`<span style="color:#0071e3">Near-Earth: ${b.neTxt||''}</span>&nbsp;&nbsp;`:'')+
+      (b.ds?`<span style="color:#30a86d">Deep-Space: ${b.dsTxt||''}</span>`:'');
+    } else {
+      tip.textContent='Pasa el cursor sobre una banda para ver los detalles de asignación.';
+    }
+  };
+}
 // ═══ RESIZE ════════════════════════════════════════════════
 window.addEventListener('resize',()=>{
+  if(curMod===2)drawRFSpectrum();
   if(curMod===4)drawAll();
   if(curMod===5)drawBD();
 });
