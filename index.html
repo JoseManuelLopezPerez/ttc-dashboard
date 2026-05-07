@@ -332,8 +332,8 @@ canvas{display:block}
       <span class="math-ref">Derivada de Ec. 21-3</span>
     </div>
     <div class="math-row">
-      <span class="math-lbl">Link margin</span>
-      <span class="math-body" style="font-family:-apple-system,sans-serif;font-style:normal;font-size:13px">M = (E<sub class="sub">b</sub>/N<sub class="sub">o</sub>)<sub class="sub">recv</sub> − (E<sub class="sub">b</sub>/N<sub class="sub">o</sub>)<sub class="sub">req</sub> − L<sub class="sub">receiver</sub></span>
+      <span class="math-lbl">Link margin (dB)</span>
+      <span class="math-body"><span style="font-family:-apple-system,sans-serif;font-size:13px">M = </span><span class="frac"><span class="frac-n">E<sub class="sub">b</sub></span><span class="frac-d">N<sub class="sub">o</sub></span></span><span style="font-size:10px;vertical-align:middle;margin:0 6px 0 2px">recv</span><span style="font-family:-apple-system,sans-serif;font-size:14px"> − </span><span class="frac"><span class="frac-n">E<sub class="sub">b</sub></span><span class="frac-d">N<sub class="sub">o</sub></span></span><span style="font-size:10px;vertical-align:middle;margin:0 6px 0 2px">req</span><span style="font-family:-apple-system,sans-serif;font-size:14px"> − L<sub class="sub">receiver</sub></span></span>
       <span class="math-ref">Sec. 21.1.4</span>
     </div>
   </div>
@@ -688,11 +688,11 @@ function renderComparison(){
     h+=`<tr class="fam"><td colspan="4" style="padding:6px 10px;font-size:9px;font-weight:700;color:#0071e3;letter-spacing:1.2px;text-transform:uppercase;background:#f0f4ff">${g.fam}</td></tr>`;
     g.params.forEach(r=>{
       if(r.bar){
-        h+=`<tr><td style="padding:7px 10px;color:#6e6e73;font-size:12px">${r.p}</td>
+        h+=`<tr><td style="padding:4px 8px;border-left:3px solid #d0dcf8;background:#f8f9ff"></td><td style="padding:7px 10px;color:#6e6e73;font-size:12px">${r.p}</td>
         <td style="padding:7px 10px"><div class="bwr"><div class="bbar" style="background:#0071e3;width:0" data-w="${r.nep}px"></div><span class="ne-val" style="font-size:11px">${r.ne}</span></div></td>
         <td style="padding:7px 10px"><div class="bwr"><div class="bbar" style="background:#30a86d;width:0" data-w="${r.dsp}px"></div><span class="ds-val" style="font-size:11px">${r.ds}</span></div></td></tr>`;
       } else {
-        h+=`<tr><td style="padding:7px 10px;color:#6e6e73;font-size:12px">${r.p}</td>
+        h+=`<tr><td style="padding:4px 8px;border-left:3px solid #e8e8ed;background:#fafafa"></td><td style="padding:7px 10px;color:#6e6e73;font-size:12px">${r.p}</td>
         <td style="padding:7px 10px;font-size:11px" class="ne-val">${r.ne}</td>
         <td style="padding:7px 10px;font-size:11px" class="ds-val">${r.ds}</td></tr>`;
       }
@@ -794,7 +794,7 @@ function drawAll(){
 }
 function drawConst(){
   const cv=document.getElementById('cvConst');
-  cv.width=cv.offsetWidth||220;
+  cv.width=220;
   const W=cv.width,H=220,ctx=cv.getContext('2d');
   const cx=W/2,cy=H/2,r=Math.min(W,H)*0.34,pad=14;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#fafafa';ctx.fillRect(0,0,W,H);
@@ -868,23 +868,23 @@ function drawWave(){
   const col=schemeInfo[curScheme].col;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#fafafa';ctx.fillRect(0,0,W,H);
   ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.beginPath();
-  for(let s=0;s<numSyms;s++){
-    let phase=0;
-    if(curScheme===0){const b=betaDeg*Math.PI/180;phase=BITS[s]===1?b:-b;}
-    else if(curScheme===1){phase=BITS[s]===1?0:Math.PI;}
+  const totalPx=(W-2*pad)*2;
+  for(let px=0;px<=totalPx;px++){
+    const xPos=pad+px/2;
+    const frac=px/totalPx;
+    const sIdx=Math.min(Math.floor(frac*numSyms),numSyms-1);
+    let mPhase=0;
+    if(curScheme===0){const b=betaDeg*Math.PI/180;mPhase=BITS[sIdx]===1?b:-b;}
+    else if(curScheme===1){mPhase=BITS[sIdx]===1?0:Math.PI;}
     else{
-      const b1=BITS[2*s],b2=BITS[2*s+1];
-      if(b1===1&&b2===1)phase=Math.PI/4;
-      else if(b1===0&&b2===1)phase=3*Math.PI/4;
-      else if(b1===0&&b2===0)phase=5*Math.PI/4;
-      else phase=7*Math.PI/4;
+      const b1=BITS[2*sIdx]||0,b2=BITS[2*sIdx+1]||0;
+      if(b1===1&&b2===1)mPhase=Math.PI/4;
+      else if(b1===0&&b2===1)mPhase=3*Math.PI/4;
+      else if(b1===0&&b2===0)mPhase=5*Math.PI/4;
+      else mPhase=7*Math.PI/4;
     }
-    const x0=pad+s*symW;
-    for(let i=0;i<=60;i++){
-      const t=i/60,x=x0+t*symW;
-      const y=cy-amp*Math.cos(2*Math.PI*4*t+phase);
-      if(s===0&&i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    }
+    const y=cy-amp*Math.cos(2*Math.PI*numSyms*2.5*frac+mPhase);
+    if(px===0)ctx.moveTo(xPos,y);else ctx.lineTo(xPos,y);
   }
   ctx.stroke();
   for(let s=0;s<numSyms;s++){
